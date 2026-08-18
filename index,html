@@ -1,776 +1,623 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Telegram — Чаты</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome для иконок -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        body {
-            background-color: #0e1621;
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .toggle-checkbox:checked + .toggle-label {
-            background-color: #007aff;
-        }
-        .toggle-checkbox:checked + .toggle-label .toggle-dot {
-            transform: translateX(1.5rem);
-        }
-        .toggle-label {
-            transition: background-color 0.3s ease;
-        }
-        .toggle-dot {
-            transition: transform 0.3s ease;
-        }
-        input:focus {
-            outline: none;
-        }
-        .screen {
-            transition: opacity 0.4s ease, transform 0.3s ease;
-        }
-        .hidden-screen {
-            display: none !important;
-        }
-        .code-input {
-            letter-spacing: 0.5em;
-            font-weight: 500;
-            font-size: 1.4rem;
-        }
-        .chat-message {
-            animation: fadeIn 0.3s ease;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .typing-indicator {
-            display: inline-flex;
-            gap: 4px;
-            padding: 8px 12px;
-        }
-        .typing-dot {
-            width: 6px;
-            height: 6px;
-            background-color: #8e8e93;
-            border-radius: 50%;
-            animation: typing 1.4s infinite;
-        }
-        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes typing {
-            0%, 60%, 100% { transform: translateY(0); }
-            30% { transform: translateY(-8px); }
-        }
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #2b5278;
-            border-radius: 3px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Telegram — Settings & Profile</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+      background: #000; overflow: hidden; margin: 0;
+    }
+    .screen {
+      position: absolute; inset: 0; display: flex; flex-direction: column; background: #000;
+      transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.28s ease;
+      will-change: transform, opacity;
+    }
+    .screen.active { transform: translateX(0); opacity: 1; z-index: 10; pointer-events: auto; }
+    .screen.next { transform: translateX(100%); opacity: 1; z-index: 5; pointer-events: none; }
+    .screen.prev { transform: translateX(-28%); opacity: 0.35; z-index: 1; pointer-events: none; }
+
+    .toggle-track { transition: background-color 0.2s ease; }
+    .toggle-thumb { transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+    input:checked + .toggle-track { background-color: #3b82f6; }
+    input:checked + .toggle-track .toggle-thumb { transform: translateX(20px); }
+
+    .code-digit {
+      width: 42px; height: 52px; border-radius: 12px; background: #1c1c1e;
+      border: 1.5px solid transparent; text-align: center; font-size: 24px; font-weight: 500;
+      color: white; outline: none; transition: border-color 0.15s, background 0.15s;
+    }
+    .code-digit:focus { border-color: #3b82f6; }
+    .code-digit.filled { background: #2c2c2e; }
+
+    .btn-primary { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+    .btn-primary:active:not(:disabled) { transform: scale(0.97); }
+
+    .chat-item:active, .settings-row:active { background: #1c1c1e; }
+
+    .bubble { max-width: 78%; border-radius: 18px; padding: 9px 13px; line-height: 1.35; }
+    .bubble-in { background: #1c1c1e; border-bottom-left-radius: 4px; }
+
+    .tab-bar {
+      background: rgba(28, 28, 30, 0.92);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-top: 0.5px solid rgba(255,255,255,0.08);
+    }
+    .tab-item.active { color: #3b82f6; }
+
+    .security-banner {
+      background: linear-gradient(135deg, #1e3a5f 0%, #1a2a4a 100%);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+    }
+
+    .settings-section { background: #1c1c1e; border-radius: 14px; overflow: hidden; }
+    .settings-row { display: flex; align-items: center; gap: 14px; padding: 11px 14px; }
+    .settings-row + .settings-row { border-top: 0.5px solid rgba(255,255,255,0.06); }
+    .settings-icon {
+      width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+
+    input.edit-field {
+      width: 100%; background: transparent; outline: none; color: white; font-size: 17px;
+    }
+    input.edit-field::placeholder { color: #6b7280; }
+  </style>
 </head>
-<body class="flex items-center justify-center min-h-screen text-white antialiased select-none p-0 sm:p-4" style="background-color: #0e1621;">
+<body class="bg-black text-white h-screen w-screen overflow-hidden">
 
-    <div class="w-full max-w-md mx-auto relative flex flex-col h-screen sm:h-[90vh] sm:rounded-3xl sm:shadow-2xl overflow-hidden" style="background-color: #0e1621;">
-        
-        <!-- ЭКРАН 1: ВВОД НОМЕРА -->
-        <div id="screenPhone" class="screen flex flex-col h-full bg-black">
-            <div class="flex flex-col items-center relative mb-6 pt-6 px-5">
-                <button class="absolute left-5 top-6 w-10 h-10 flex items-center justify-center text-neutral-500 hover:text-white transition-colors text-2xl font-light" aria-label="Закрыть">
-                    ✕
-                </button>
-                <div class="w-20 h-20 rounded-full bg-neutral-800 flex items-center justify-center mb-5 shadow-lg border border-neutral-700/40">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-neutral-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
-                    </svg>
-                </div>
-                <h1 class="text-2xl font-semibold tracking-tight mb-1">Телефон</h1>
-                <p class="text-neutral-400 text-sm mb-1">Пожалуйста, подтвердите страну и введите</p>
-                <p class="text-neutral-400 text-sm">
-                    номер телефона. 
-                    <a href="#" class="text-[#007aff] font-medium hover:underline">используйте ключ доступа ›</a>
-                </p>
-            </div>
+  <div class="relative w-full h-full max-w-[390px] mx-auto overflow-hidden">
 
-            <div class="px-5">
-                <div class="w-full bg-neutral-900 rounded-2xl px-4 py-3.5 flex items-center justify-between mb-6 cursor-pointer active:bg-neutral-800 transition-colors">
-                    <div class="flex items-center gap-3">
-                        <div class="w-7 h-7 rounded-full bg-neutral-800 flex items-center justify-center">
-                            <i class="fas fa-user-secret text-neutral-400 text-sm"></i>
-                        </div>
-                        <span class="font-medium text-[15px]">Анонимные номера</span>
-                    </div>
-                    <i class="fas fa-chevron-right text-neutral-500 text-sm"></i>
-                </div>
-
-                <div class="w-full bg-neutral-900 rounded-2xl px-4 py-1 flex items-center h-16 mb-6 border border-neutral-800/80 focus-within:border-[#007aff]/60 transition-colors">
-                    <span class="text-white text-lg font-medium tracking-wide pr-3">+888</span>
-                    <div class="h-6 w-px bg-neutral-700/70 mx-1"></div>
-                    <input 
-                        type="tel" 
-                        id="phoneInput" 
-                        inputmode="numeric" 
-                        autocomplete="tel" 
-                        placeholder="000 000 000" 
-                        maxlength="11" 
-                        class="bg-transparent flex-1 text-white text-lg font-medium placeholder-neutral-600 tracking-wider ml-2 py-3"
-                    >
-                </div>
-
-                <div class="flex items-center justify-between mb-8">
-                    <div class="pr-4">
-                        <p class="text-[16px] font-medium text-white">Синхронизировать контакты</p>
-                        <p class="text-[13px] text-neutral-500 leading-tight mt-0.5">Контакты с этого устройства будут импортированы.</p>
-                    </div>
-                    <div class="relative inline-block w-12 h-7 flex-shrink-0 ml-2">
-                        <input type="checkbox" id="toggleContacts" class="toggle-checkbox peer sr-only" checked>
-                        <label for="toggleContacts" class="toggle-label absolute inset-0 rounded-full bg-[#007aff] cursor-pointer transition-colors duration-300 flex items-center">
-                            <span class="toggle-dot absolute left-1 top-1 bg-white w-5 h-5 rounded-full shadow-md transform translate-x-5 transition-transform duration-300"></span>
-                        </label>
-                    </div>
-                </div>
-
-                <button 
-                    id="continueBtn" 
-                    disabled 
-                    class="w-full py-4 rounded-2xl bg-neutral-800 text-neutral-600 font-semibold text-[17px] transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    Продолжить
-                </button>
-                <p class="text-center text-neutral-600 text-xs mt-4 pb-4">Ваш номер будет использован только для входа в Telegram.</p>
-            </div>
+    <!-- ===================== PHONE ===================== -->
+    <div id="screenPhone" class="screen active">
+      <div class="relative pt-14 pb-5 px-5 flex-shrink-0">
+        <button onclick="goBack()" class="absolute left-5 top-14 w-9 h-9 flex items-center justify-center text-[26px] text-neutral-400 leading-none active:opacity-50">✕</button>
+        <div class="flex justify-center mb-5">
+          <div class="w-[72px] h-[72px] rounded-full bg-neutral-900 flex items-center justify-center">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="5" y="2" width="14" height="20" rx="2.5"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+          </div>
         </div>
-
-        <!-- ЭКРАН 2: ВВОД КОДА -->
-        <div id="screenCode" class="screen hidden-screen flex flex-col h-full bg-black">
-            <div class="flex flex-col items-center relative mb-6 pt-6 px-5">
-                <button id="backToPhone" class="absolute left-5 top-6 w-10 h-10 flex items-center justify-center text-neutral-500 hover:text-white transition-colors text-2xl font-light" aria-label="Назад">
-                    ←
-                </button>
-                <div class="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center mb-4 shadow-lg border border-neutral-700/40">
-                    <i class="fas fa-lock text-neutral-300 text-xl"></i>
-                </div>
-                <h1 class="text-xl font-semibold tracking-tight mb-1">Введите код</h1>
-                <p class="text-neutral-400 text-sm text-center px-6">
-                    Мы отправили SMS с кодом на номер <span id="displayPhone" class="text-white font-medium">+888 000 000 000</span>
-                </p>
+        <h1 class="text-[28px] font-semibold text-center tracking-tight mb-2">Телефон</h1>
+        <p class="text-[15px] text-neutral-400 text-center leading-snug">
+          Пожалуйста, подтвердите код страны<br>и введите свой номер телефона.<br>
+          <a href="#" class="text-blue-500 font-medium" onclick="return false;">используйте ключ доступа ›</a>
+        </p>
+      </div>
+      <div class="px-5 mb-5">
+        <button class="w-full flex items-center justify-between bg-neutral-900 active:bg-neutral-800 rounded-2xl px-4 py-3.5">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-neutral-800 flex items-center justify-center">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
             </div>
-
-            <div class="px-5">
-                <div class="w-full bg-neutral-900 rounded-2xl px-4 py-2 flex items-center h-16 mb-4 border border-neutral-800/80 focus-within:border-[#007aff]/60 transition-colors">
-                    <input 
-                        type="text" 
-                        id="codeInput" 
-                        inputmode="numeric" 
-                        autocomplete="one-time-code" 
-                        placeholder="•••••" 
-                        maxlength="5" 
-                        class="code-input bg-transparent flex-1 text-white text-center placeholder-neutral-600 py-3"
-                    >
-                </div>
-
-                <p id="codeHint" class="text-neutral-500 text-sm mb-4 text-center">Введите 5-значный код</p>
-
-                <button 
-                    id="confirmCodeBtn" 
-                    disabled 
-                    class="w-full py-4 rounded-2xl bg-neutral-800 text-neutral-600 font-semibold text-[17px] transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    Подтвердить
-                </button>
-
-                <div class="text-center mt-4 pb-4">
-                    <span class="text-neutral-500 text-sm">Не пришёл код? </span>
-                    <a href="#" id="resendCode" class="text-[#007aff] font-medium hover:underline">Отправить ещё раз</a>
-                </div>
-            </div>
+            <span class="text-[16px] font-medium">Анонимные номера</span>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <div class="px-5 mb-5">
+        <div class="flex items-center bg-neutral-900 rounded-2xl px-4 h-[52px]">
+          <span class="text-[17px] font-medium">+888</span>
+          <div class="w-px h-6 bg-neutral-700 mx-3.5"></div>
+          <input id="phoneInput" type="text" inputmode="numeric" placeholder="000 000 000" class="flex-1 bg-transparent text-[17px] outline-none caret-blue-500 placeholder:text-neutral-600" maxlength="11">
         </div>
-
-        <!-- ЭКРАН 3: ЧАТЫ С ПОЛНЫМ ИНТЕРФЕЙСОМ -->
-        <div id="screenChats" class="screen hidden-screen flex flex-col h-full" style="background-color: #0e1621;">
-            <!-- Верхняя панель -->
-            <div class="px-4 pt-4 pb-2 flex items-center justify-between" style="background-color: #17212b;">
-                <button class="px-3 py-2 rounded-lg text-[#007aff] font-medium hover:bg-[#2b5278] transition-colors">
-                    Изм.
-                </button>
-                <h1 class="text-xl font-bold">Чаты</h1>
-                <div class="flex items-center gap-2">
-                    <button class="w-10 h-10 rounded-full flex items-center justify-center text-neutral-400 hover:text-white transition-colors">
-                        <i class="fas fa-pen text-lg"></i>
-                    </button>
-                    <button class="w-10 h-10 rounded-full flex items-center justify-center text-neutral-400 hover:text-white transition-colors">
-                        <i class="fas fa-bolt text-lg"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Системный баннер безопасности -->
-            <div class="mx-3 mt-3 p-4 rounded-2xl border border-yellow-600/30" style="background-color: #2b1e0e;">
-                <div class="flex items-start gap-3">
-                    <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style="background-color: #3a2b1a;">
-                        <i class="fas fa-shield-halved text-yellow-500 text-lg"></i>
-                    </div>
-                    <div class="flex-1">
-                        <p class="text-sm text-yellow-100 leading-snug">
-                            <span class="font-semibold">Кто-то получил доступ к Вашим чатам...</span><br>
-                            Обнаружен вход в Ваш аккаунт с 88ЕС, Taraz, Kazakhstan. Это были Вы?
-                        </p>
-                        <div class="flex gap-2 mt-3">
-                            <button class="px-4 py-2 rounded-full text-sm font-medium bg-yellow-600 text-white hover:bg-yellow-700 transition-colors">
-                                Да, это я
-                            </button>
-                            <button class="px-4 py-2 rounded-full text-sm font-medium border border-yellow-600 text-yellow-400 hover:bg-yellow-600/20 transition-colors">
-                                Нет, не я!
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Список чатов -->
-            <div class="flex-1 overflow-y-auto mt-2">
-                <!-- Закрепленные чаты -->
-                <div class="px-4 py-2 flex items-center justify-between">
-                    <span class="text-xs text-neutral-500 font-medium">ЗАКРЕПЛЕННЫЕ</span>
-                </div>
-                
-                <!-- Закрепленный чат 1 -->
-                <div class="px-3 py-2 flex items-center gap-3 cursor-pointer hover:bg-[#17212b] transition-colors active:bg-[#17212b] rounded-lg mx-1 my-1">
-                    <div class="relative flex-shrink-0">
-                        <div class="w-14 h-14 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
-                            <i class="fas fa-robot text-white text-xl"></i>
-                        </div>
-                        <span class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-[#0e1621]"></span>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-1">
-                                <i class="fas fa-thumbtack text-xs text-neutral-500"></i>
-                                <h3 class="font-semibold text-white">Unixgram</h3>
-                            </div>
-                            <span class="text-xs text-neutral-500">14:32</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <p class="text-neutral-400 text-sm truncate">bot • был ваш код подтверждение 00000</p>
-                            <span class="bg-[#007aff] text-white text-xs font-medium rounded-full w-5 h-5 flex items-center justify-center ml-2">1</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Закрепленный чат 2 -->
-                <div class="px-3 py-2 flex items-center gap-3 cursor-pointer hover:bg-[#17212b] transition-colors active:bg-[#17212b] rounded-lg mx-1 my-1">
-                    <div class="relative flex-shrink-0">
-                        <div class="w-14 h-14 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center">
-                            <i class="fas fa-users text-white text-xl"></i>
-                        </div>
-                        <span class="absolute bottom-0 right-0 w-4 h-4 bg-gray-500 rounded-full border-2 border-[#0e1621]"></span>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-1">
-                                <i class="fas fa-thumbtack text-xs text-neutral-500"></i>
-                                <h3 class="font-semibold text-white">Рабочая группа</h3>
-                            </div>
-                            <span class="text-xs text-neutral-500">13:15</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <p class="text-neutral-400 text-sm truncate">Алексей: Отчёт готов к отправке</p>
-                            <span class="bg-[#007aff] text-white text-xs font-medium rounded-full w-5 h-5 flex items-center justify-center ml-2">3</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Обычные чаты -->
-                <div class="px-4 py-2 flex items-center justify-between mt-2">
-                    <span class="text-xs text-neutral-500 font-medium">ЧАТЫ</span>
-                </div>
-
-                <!-- Обычный чат 1 -->
-                <div class="px-3 py-2 flex items-center gap-3 cursor-pointer hover:bg-[#17212b] transition-colors active:bg-[#17212b] rounded-lg mx-1 my-1">
-                    <div class="relative flex-shrink-0">
-                        <div class="w-14 h-14 rounded-full bg-gradient-to-br from-pink-500 to-red-500 flex items-center justify-center">
-                            <i class="fas fa-user text-white text-xl"></i>
-                        </div>
-                        <span class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-[#0e1621]"></span>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center justify-between">
-                            <h3 class="font-semibold text-white">Мария Иванова</h3>
-                            <span class="text-xs text-neutral-500">12:45</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <p class="text-neutral-400 text-sm truncate">Спасибо за информацию! 🙏</p>
-                            <i class="fas fa-check-double text-blue-500 text-sm ml-2"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Обычный чат 2 -->
-                <div class="px-3 py-2 flex items-center gap-3 cursor-pointer hover:bg-[#17212b] transition-colors active:bg-[#17212b] rounded-lg mx-1 my-1">
-                    <div class="relative flex-shrink-0">
-                        <div class="w-14 h-14 rounded-full bg-gradient-to-br from-orange-500 to-yellow-500 flex items-center justify-center">
-                            <i class="fas fa-user text-white text-xl"></i>
-                        </div>
-                        <span class="absolute bottom-0 right-0 w-4 h-4 bg-gray-500 rounded-full border-2 border-[#0e1621]"></span>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center justify-between">
-                            <h3 class="font-semibold text-white">Дмитрий Смирнов</h3>
-                            <span class="text-xs text-neutral-500">11:20</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <p class="text-neutral-400 text-sm truncate">Встреча переносится на завтра</p>
-                            <span class="bg-gray-600 text-white text-xs font-medium rounded-full w-5 h-5 flex items-center justify-center ml-2">5</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Обычный чат 3 -->
-                <div class="px-3 py-2 flex items-center gap-3 cursor-pointer hover:bg-[#17212b] transition-colors active:bg-[#17212b] rounded-lg mx-1 my-1">
-                    <div class="relative flex-shrink-0">
-                        <div class="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                            <i class="fas fa-user text-white text-xl"></i>
-                        </div>
-                        <span class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-[#0e1621]"></span>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center justify-between">
-                            <h3 class="font-semibold text-white">Анна Петрова</h3>
-                            <span class="text-xs text-neutral-500">09:15</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <p class="text-neutral-400 text-sm truncate">Документы готовы к подписанию</p>
-                            <i class="fas fa-check text-neutral-500 text-sm ml-2"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Обычный чат 4 -->
-                <div class="px-3 py-2 flex items-center gap-3 cursor-pointer hover:bg-[#17212b] transition-colors active:bg-[#17212b] rounded-lg mx-1 my-1">
-                    <div class="relative flex-shrink-0">
-                        <div class="w-14 h-14 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">
-                            <i class="fas fa-user text-white text-xl"></i>
-                        </div>
-                        <span class="absolute bottom-0 right-0 w-4 h-4 bg-gray-500 rounded-full border-2 border-[#0e1621]"></span>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center justify-between">
-                            <h3 class="font-semibold text-white">Сергей Волков</h3>
-                            <span class="text-xs text-neutral-500">Вчера</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <p class="text-neutral-400 text-sm truncate">Отправь мне файл с проектом</p>
-                            <span class="bg-gray-600 text-white text-xs font-medium rounded-full w-5 h-5 flex items-center justify-center ml-2">2</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Обычный чат 5 -->
-                <div class="px-3 py-2 flex items-center gap-3 cursor-pointer hover:bg-[#17212b] transition-colors active:bg-[#17212b] rounded-lg mx-1 my-1">
-                    <div class="relative flex-shrink-0">
-                        <div class="w-14 h-14 rounded-full bg-gradient-to-br from-purple-600 to-indigo-700 flex items-center justify-center">
-                            <i class="fas fa-user text-white text-xl"></i>
-                        </div>
-                        <span class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-[#0e1621]"></span>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center justify-between">
-                            <h3 class="font-semibold text-white">Елена Козлова</h3>
-                            <span class="text-xs text-neutral-500">Вчера</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <p class="text-neutral-400 text-sm truncate">Созвон в 15:00 по мск</p>
-                            <i class="fas fa-check-double text-blue-500 text-sm ml-2"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Нижняя плавающая панель навигации -->
-            <div class="absolute bottom-4 left-4 right-4 flex items-center justify-around rounded-3xl shadow-2xl border border-white/10" style="background-color: rgba(23, 33, 43, 0.95); backdrop-filter: blur(10px);">
-                <button class="flex flex-col items-center py-3 px-4 text-neutral-400 hover:text-white transition-colors">
-                    <div class="relative">
-                        <i class="fas fa-user text-xl"></i>
-                        <span class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border border-[#17212b]"></span>
-                    </div>
-                    <span class="text-xs mt-1">Контакты</span>
-                </button>
-                
-                <button class="flex flex-col items-center py-3 px-4 text-neutral-400 hover:text-white transition-colors">
-                    <i class="fas fa-phone text-xl"></i>
-                    <span class="text-xs mt-1">Звонки</span>
-                </button>
-                
-                <button class="flex flex-col items-center py-3 px-4 text-[#007aff] transition-colors">
-                    <div class="relative">
-                        <i class="fas fa-comment text-xl"></i>
-                        <span class="absolute -top-1 -right-2 bg-[#007aff] text-white text-xs font-medium rounded-full w-5 h-5 flex items-center justify-center border border-[#17212b]">14</span>
-                    </div>
-                    <span class="text-xs mt-1 font-medium">Чаты</span>
-                </button>
-                
-                <button class="flex flex-col items-center py-3 px-4 text-neutral-400 hover:text-white transition-colors">
-                    <div class="relative">
-                        <i class="fas fa-cog text-xl"></i>
-                        <span class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border border-[#17212b]"></span>
-                    </div>
-                    <span class="text-xs mt-1">Настройки</span>
-                </button>
-                
-                <button class="flex flex-col items-center py-3 px-4 text-neutral-400 hover:text-white transition-colors">
-                    <i class="fas fa-search text-xl"></i>
-                    <span class="text-xs mt-1">Поиск</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- ЭКРАН 4: ОТКРЫТЫЙ ЧАТ -->
-        <div id="screenOpenChat" class="screen hidden-screen flex flex-col h-full" style="background-color: #0e1621;">
-            <div class="px-4 pt-4 pb-2 flex items-center gap-3" style="background-color: #17212b;">
-                <button onclick="closeChat()" class="w-10 h-10 flex items-center justify-center text-neutral-400 hover:text-white">
-                    <i class="fas fa-arrow-left text-xl"></i>
-                </button>
-                <div class="flex items-center gap-3 flex-1">
-                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
-                        <i class="fas fa-robot text-white"></i>
-                    </div>
-                    <div>
-                        <h2 class="font-semibold">Unixgram</h2>
-                        <p class="text-xs text-green-500">онлайн</p>
-                    </div>
-                </div>
-                <button class="w-10 h-10 flex items-center justify-center text-neutral-400 hover:text-white">
-                    <i class="fas fa-ellipsis-v text-xl"></i>
-                </button>
-            </div>
-
-            <div class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-                <div class="text-center">
-                    <span class="text-xs text-neutral-500 bg-[#17212b] px-3 py-1 rounded-full">Сегодня</span>
-                </div>
-
-                <div class="flex items-end gap-2 chat-message">
-                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
-                        <i class="fas fa-robot text-white text-xs"></i>
-                    </div>
-                    <div class="bg-[#17212b] rounded-2xl rounded-bl-none px-4 py-2 max-w-[75%]">
-                        <p class="text-white">Здравствуйте! 👋</p>
-                        <span class="text-xs text-neutral-500 mt-1 block">14:30</span>
-                    </div>
-                </div>
-
-                <div class="flex items-end gap-2 chat-message">
-                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
-                        <i class="fas fa-robot text-white text-xs"></i>
-                    </div>
-                    <div class="bg-[#17212b] rounded-2xl rounded-bl-none px-4 py-2 max-w-[75%]">
-                        <p class="text-white">Был ваш код подтверждения: <span class="font-bold text-[#007aff] text-lg">00000</span></p>
-                        <span class="text-xs text-neutral-500 mt-1 block">14:32</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="px-4 py-3 flex items-center gap-2" style="background-color: #17212b;">
-                <button class="w-10 h-10 rounded-full flex items-center justify-center text-neutral-400 hover:text-white">
-                    <i class="fas fa-paperclip"></i>
-                </button>
-                <input 
-                    type="text" 
-                    placeholder="Сообщение" 
-                    class="flex-1 bg-[#0e1621] rounded-full px-4 py-3 text-white placeholder-neutral-500 focus:outline-none"
-                    id="chatInput"
-                >
-                <button class="w-10 h-10 rounded-full bg-[#007aff] flex items-center justify-center text-white" onclick="sendMessage()">
-                    <i class="fas fa-paper-plane"></i>
-                </button>
-            </div>
-        </div>
-        
+      </div>
+      <div class="px-5 mb-6 flex items-center justify-between">
+        <span class="text-[16px]">Синхронизировать контакты</span>
+        <label class="relative inline-flex cursor-pointer">
+          <input type="checkbox" class="sr-only" checked>
+          <div class="toggle-track w-[51px] h-[31px] bg-neutral-700 rounded-full relative">
+            <div class="toggle-thumb absolute top-[3px] left-[3px] w-[25px] h-[25px] bg-white rounded-full shadow"></div>
+          </div>
+        </label>
+      </div>
+      <div class="flex-1"></div>
+      <div class="px-5 pb-10">
+        <button id="continueBtn" disabled class="btn-primary w-full h-[50px] rounded-xl text-[17px] font-semibold disabled:bg-neutral-800 disabled:text-neutral-600 bg-blue-500 text-white">Продолжить</button>
+      </div>
     </div>
 
-    <script>
-        (function() {
-            const screenPhone = document.getElementById('screenPhone');
-            const screenCode = document.getElementById('screenCode');
-            const screenChats = document.getElementById('screenChats');
-            const screenOpenChat = document.getElementById('screenOpenChat');
-            
-            const phoneInput = document.getElementById('phoneInput');
-            const continueBtn = document.getElementById('continueBtn');
-            
-            const codeInput = document.getElementById('codeInput');
-            const confirmCodeBtn = document.getElementById('confirmCodeBtn');
-            const displayPhone = document.getElementById('displayPhone');
-            const backToPhone = document.getElementById('backToPhone');
-            const resendCode = document.getElementById('resendCode');
-            const codeHint = document.getElementById('codeHint');
+    <!-- ===================== CODE ===================== -->
+    <div id="screenCode" class="screen next">
+      <div class="relative pt-14 pb-6 px-5">
+        <button onclick="goBack()" class="absolute left-5 top-14 text-blue-500 text-[17px] font-medium">‹ Назад</button>
+        <div class="flex justify-center mb-5 mt-2">
+          <div class="w-[72px] h-[72px] rounded-full bg-neutral-900 flex items-center justify-center">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+          </div>
+        </div>
+        <h1 class="text-[28px] font-semibold text-center mb-2">Код</h1>
+        <p class="text-[15px] text-neutral-400 text-center">Мы отправили код на номер<br><span id="displayNumber" class="text-white font-medium">+888 000 000 000</span></p>
+      </div>
+      <div class="px-5 mb-8">
+        <div class="flex justify-center gap-2.5">
+          <input class="code-digit" maxlength="1" inputmode="numeric">
+          <input class="code-digit" maxlength="1" inputmode="numeric">
+          <input class="code-digit" maxlength="1" inputmode="numeric">
+          <input class="code-digit" maxlength="1" inputmode="numeric">
+          <input class="code-digit" maxlength="1" inputmode="numeric">
+          <input class="code-digit" maxlength="1" inputmode="numeric">
+        </div>
+      </div>
+      <div class="text-center mb-6">
+        <button id="resendBtn" class="text-blue-500 text-[15px] font-medium" disabled>Отправить код повторно через <span id="timer">60</span></button>
+      </div>
+      <div class="flex-1"></div>
+      <div class="px-5 pb-10">
+        <button id="verifyBtn" disabled class="btn-primary w-full h-[50px] rounded-xl text-[17px] font-semibold disabled:bg-neutral-800 disabled:text-neutral-600 bg-blue-500 text-white">Далее</button>
+      </div>
+    </div>
 
-            function formatPhone(value) {
-                let digits = value.replace(/\D/g, '');
-                if (digits.length > 9) digits = digits.slice(0, 9);
-                const parts = [];
-                if (digits.length > 0) parts.push(digits.substring(0, 3));
-                if (digits.length >= 4) parts.push(digits.substring(3, 6));
-                if (digits.length >= 7) parts.push(digits.substring(6, 9));
-                return parts.join(' ');
-            }
+    <!-- ===================== CHATS ===================== -->
+    <div id="screenChats" class="screen next">
+      <div class="pt-12 pb-2 px-4 flex items-center justify-between bg-black flex-shrink-0 relative">
+        <button class="text-blue-500 text-[17px] font-medium">Изм.</button>
+        <h1 class="text-[17px] font-semibold absolute left-1/2 -translate-x-1/2">Чаты</h1>
+        <div class="flex gap-1">
+          <button class="w-9 h-9 flex items-center justify-center text-blue-500">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="px-4 pb-2">
+        <div class="bg-neutral-900 rounded-xl h-9 flex items-center px-3 gap-2">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <span class="text-neutral-500 text-[15px]">Поиск</span>
+        </div>
+      </div>
+      <div class="flex-1 overflow-y-auto pb-24">
+        <div id="securityBanner" class="mx-4 mb-3 security-banner rounded-2xl p-3.5">
+          <div class="flex gap-3">
+            <div class="w-9 h-9 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <div class="flex-1">
+              <p class="text-[14px] leading-snug text-blue-100">Кто-то получил доступ к Вашим чатам. Обнаружен вход с <span class="font-medium text-white">88ЕС, Taraz, Kazakhstan</span>. Это были Вы?</p>
+              <div class="flex gap-2 mt-3">
+                <button onclick="dismissBanner(true)" class="flex-1 bg-blue-500 text-white text-[14px] font-medium py-2 rounded-xl">Да, это я</button>
+                <button onclick="dismissBanner(false)" class="flex-1 bg-neutral-800 text-white text-[14px] font-medium py-2 rounded-xl border border-neutral-700">Нет, не я!</button>
+              </div>
+            </div>
+          </div>
+        </div>
 
-            function updatePhoneButtonState() {
-                const rawDigits = phoneInput.value.replace(/\D/g, '');
-                const isValid = rawDigits.length === 9;
-                if (isValid) {
-                    continueBtn.disabled = false;
-                    continueBtn.classList.remove('bg-neutral-800', 'text-neutral-600');
-                    continueBtn.classList.add('bg-[#007aff]', 'text-white', 'hover:bg-[#1a87ff]', 'shadow-lg');
-                } else {
-                    continueBtn.disabled = true;
-                    continueBtn.classList.add('bg-neutral-800', 'text-neutral-600');
-                    continueBtn.classList.remove('bg-[#007aff]', 'text-white', 'hover:bg-[#1a87ff]', 'shadow-lg');
-                }
-            }
+        <div class="px-4 pt-1 pb-1.5 flex items-center gap-1.5">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="#6b7280"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+          <span class="text-[12px] text-neutral-500 font-medium uppercase tracking-wide">Закреплённые</span>
+        </div>
 
-            function updateCodeButtonState() {
-                const codeDigits = codeInput.value.replace(/\D/g, '');
-                const isValid = codeDigits.length === 5;
-                if (isValid) {
-                    confirmCodeBtn.disabled = false;
-                    confirmCodeBtn.classList.remove('bg-neutral-800', 'text-neutral-600');
-                    confirmCodeBtn.classList.add('bg-[#007aff]', 'text-white', 'hover:bg-[#1a87ff]', 'shadow-lg');
-                } else {
-                    confirmCodeBtn.disabled = true;
-                    confirmCodeBtn.classList.add('bg-neutral-800', 'text-neutral-600');
-                    confirmCodeBtn.classList.remove('bg-[#007aff]', 'text-white', 'hover:bg-[#1a87ff]', 'shadow-lg');
-                }
-                if (codeDigits.length !== 5) {
-                    codeHint.textContent = 'Введите 5-значный код';
-                    codeHint.classList.remove('text-red-400');
-                }
-            }
+        <div class="chat-item flex items-center gap-3 px-4 py-2.5" onclick="openChat()">
+          <div class="relative">
+            <div class="w-[54px] h-[54px] rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-white font-bold text-xl">U</div>
+            <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-[2.5px] border-black"></div>
+          </div>
+          <div class="flex-1 min-w-0 border-b border-neutral-900/80 pb-2.5">
+            <div class="flex justify-between">
+              <span class="font-semibold text-[16px]">Unixgram</span>
+              <span class="text-[13px] text-neutral-500">сейчас</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <p class="text-[15px] text-neutral-400 truncate">Ваш код подтверждения: 00000</p>
+              <div class="min-w-[20px] h-5 px-1.5 rounded-full bg-blue-500 text-[11px] font-semibold flex items-center justify-center">1</div>
+            </div>
+          </div>
+        </div>
 
-            function showCodeScreen() {
-                screenPhone.classList.add('hidden-screen');
-                screenCode.classList.remove('hidden-screen');
-                screenChats.classList.add('hidden-screen');
-                screenOpenChat.classList.add('hidden-screen');
-                const formatted = '+888 ' + phoneInput.value.trim();
-                displayPhone.textContent = formatted;
-                codeInput.value = '';
-                updateCodeButtonState();
-                codeHint.textContent = 'Введите 5-значный код';
-                codeHint.classList.remove('text-red-400');
-                setTimeout(() => codeInput.focus(), 300);
-            }
+        <div class="chat-item flex items-center gap-3 px-4 py-2.5">
+          <div class="w-[54px] h-[54px] rounded-full bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center text-white font-semibold text-lg">А</div>
+          <div class="flex-1 min-w-0 border-b border-neutral-900/80 pb-2.5">
+            <div class="flex justify-between"><span class="font-semibold text-[16px]">Аружан</span><span class="text-[13px] text-neutral-500">14:22</span></div>
+            <div class="flex justify-between"><p class="text-[15px] text-neutral-400 truncate">Ок, тогда в 7 у фонтана</p><div class="min-w-[20px] h-5 px-1.5 rounded-full bg-blue-500 text-[11px] font-semibold flex items-center justify-center">3</div></div>
+          </div>
+        </div>
+      </div>
 
-            function showPhoneScreen() {
-                screenCode.classList.add('hidden-screen');
-                screenChats.classList.add('hidden-screen');
-                screenOpenChat.classList.add('hidden-screen');
-                screenPhone.classList.remove('hidden-screen');
-                setTimeout(() => phoneInput.focus(), 300);
-            }
+      <div class="absolute bottom-0 left-0 right-0 tab-bar px-2 pt-1.5 pb-5">
+        <div class="flex items-end justify-around">
+          <button class="tab-item flex flex-col items-center gap-0.5 w-14 text-neutral-500">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            <span class="text-[10px]">Контакты</span>
+          </button>
+          <button class="tab-item flex flex-col items-center gap-0.5 w-14 text-neutral-500">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/></svg>
+            <span class="text-[10px]">Звонки</span>
+          </button>
+          <button class="tab-item active flex flex-col items-center gap-0.5 w-14" onclick="goTo('chats')">
+            <div class="relative">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+              <span class="absolute -top-1.5 -right-3 min-w-[18px] h-[18px] px-1 bg-blue-500 rounded-full text-[11px] font-bold text-white flex items-center justify-center">14</span>
+            </div>
+            <span class="text-[10px] font-medium">Чаты</span>
+          </button>
+          <button class="tab-item flex flex-col items-center gap-0.5 w-14 text-neutral-500" onclick="goTo('settings')">
+            <div class="relative">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+              <span class="absolute -top-1 -right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full"></span>
+            </div>
+            <span class="text-[10px]">Настройки</span>
+          </button>
+          <button class="tab-item flex flex-col items-center gap-0.5 w-14 text-neutral-500">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span class="text-[10px]">Поиск</span>
+          </button>
+        </div>
+      </div>
+    </div>
 
-            function showChatsScreen() {
-                screenPhone.classList.add('hidden-screen');
-                screenCode.classList.add('hidden-screen');
-                screenOpenChat.classList.add('hidden-screen');
-                screenChats.classList.remove('hidden-screen');
-            }
+    <!-- ===================== SETTINGS ===================== -->
+    <div id="screenSettings" class="screen next">
+      <div class="pt-12 pb-3 px-4 flex items-center justify-between bg-black flex-shrink-0">
+        <div class="w-16"></div>
+        <h1 class="text-[17px] font-semibold">Настройки</h1>
+        <button class="text-blue-500 text-[17px] font-medium" onclick="goTo('editProfile')">Изм.</button>
+      </div>
 
-            window.openChat = function() {
-                screenChats.classList.add('hidden-screen');
-                screenOpenChat.classList.remove('hidden-screen');
-            };
+      <div class="flex-1 overflow-y-auto pb-24">
+        <div class="px-4 pt-2 pb-4" onclick="goTo('profile')">
+          <div class="flex items-center gap-4 p-3 rounded-2xl active:bg-neutral-900/60">
+            <div class="w-[68px] h-[68px] rounded-full bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 flex items-center justify-center text-white font-bold text-2xl flex-shrink-0">M</div>
+            <div class="flex-1 min-w-0">
+              <div class="text-[20px] font-semibold leading-tight" id="settingsName">mellstroy</div>
+              <div class="text-[15px] text-neutral-400 mt-0.5" id="settingsPhone">+7 777 161 85 60</div>
+              <div class="text-[15px] text-blue-400" id="settingsUsername">@brat077V</div>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
 
-            window.closeChat = function() {
-                screenOpenChat.classList.add('hidden-screen');
-                screenChats.classList.remove('hidden-screen');
-            };
+        <div class="px-4 mb-5">
+          <div class="settings-section">
+            <div class="settings-row">
+              <div class="settings-icon bg-blue-500/20 text-blue-400"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg></div>
+              <span class="flex-1 text-[16px]">Избранное</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="settings-row">
+              <div class="settings-icon bg-green-500/20 text-green-400"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/></svg></div>
+              <span class="flex-1 text-[16px]">Недавние звонки</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="settings-row">
+              <div class="settings-icon bg-orange-500/20 text-orange-400"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div>
+              <span class="flex-1 text-[16px]">Устройства</span>
+              <span class="text-neutral-500 text-[15px] mr-1">2</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="settings-row">
+              <div class="settings-icon bg-purple-500/20 text-purple-400"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+              <span class="flex-1 text-[16px]">Папки с чатами</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+          </div>
+        </div>
 
-            window.sendMessage = function() {
-                const chatInput = document.getElementById('chatInput');
-                const messageText = chatInput.value.trim();
-                if (messageText) {
-                    const messagesContainer = document.querySelector('#screenOpenChat .flex-1.overflow-y-auto');
-                    const userMessage = document.createElement('div');
-                    userMessage.className = 'flex items-end gap-2 justify-end chat-message';
-                    userMessage.innerHTML = `
-                        <div class="bg-[#007aff] rounded-2xl rounded-br-none px-4 py-2 max-w-[75%]">
-                            <p class="text-white">${messageText}</p>
-                            <span class="text-xs text-blue-200 mt-1 block">${new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}</span>
-                        </div>
-                        <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0">
-                            <i class="fas fa-user text-white text-xs"></i>
-                        </div>
-                    `;
-                    messagesContainer.appendChild(userMessage);
-                    
-                    chatInput.value = '';
-                    
-                    setTimeout(() => {
-                        const botReply = document.createElement('div');
-                        botReply.className = 'flex items-end gap-2 chat-message';
-                        botReply.innerHTML = `
-                            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-robot text-white text-xs"></i>
-                            </div>
-                            <div class="bg-[#17212b] rounded-2xl rounded-bl-none px-4 py-2 max-w-[75%]">
-                                <p class="text-white">Ваш код подтверждения: <span class="font-bold text-[#007aff]">00000</span></p>
-                                <span class="text-xs text-neutral-500 mt-1 block">${new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}</span>
-                            </div>
-                        `;
-                        messagesContainer.appendChild(botReply);
-                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                    }, 1000);
-                    
-                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                }
-            };
+        <div class="px-4 mb-5">
+          <div class="settings-section">
+            <div class="settings-row">
+              <div class="settings-icon bg-red-500/20 text-red-400"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+              <span class="flex-1 text-[16px]">Уведомления и звуки</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="settings-row">
+              <div class="settings-icon bg-blue-500/20 text-blue-400"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+              <span class="flex-1 text-[16px]">Конфиденциальность</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="settings-row">
+              <div class="settings-icon bg-cyan-500/20 text-cyan-400"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+              <span class="flex-1 text-[16px]">Данные и память</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="settings-row">
+              <div class="settings-icon bg-pink-500/20 text-pink-400"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/></svg></div>
+              <span class="flex-1 text-[16px]">Оформление</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+          </div>
+        </div>
 
-            phoneInput.addEventListener('input', function(e) {
-                const formatted = formatPhone(e.target.value);
-                if (e.target.value !== formatted) {
-                    e.target.value = formatted;
-                }
-                updatePhoneButtonState();
-            });
+        <div class="px-4 mb-5">
+          <div class="settings-section">
+            <div class="settings-row">
+              <div class="settings-icon bg-gradient-to-br from-yellow-400 to-orange-500 text-white"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+              <span class="flex-1 text-[16px]">Telegram Premium</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="settings-row">
+              <div class="settings-icon bg-yellow-500/20 text-yellow-400"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+              <span class="flex-1 text-[16px]">Мои звёзды</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="settings-row">
+              <div class="settings-icon bg-blue-600/20 text-blue-400"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></div>
+              <span class="flex-1 text-[16px]">Telegram для бизнеса</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
 
-            phoneInput.addEventListener('keydown', function(e) {
-                const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
-                if (allowedKeys.includes(e.key)) return;
-                if (!/^\d$/.test(e.key)) {
-                    e.preventDefault();
-                }
-                if (e.key === 'Enter' && !continueBtn.disabled) {
-                    showCodeScreen();
-                }
-            });
+      <div class="absolute bottom-0 left-0 right-0 tab-bar px-2 pt-1.5 pb-5">
+        <div class="flex items-end justify-around">
+          <button class="tab-item flex flex-col items-center gap-0.5 w-14 text-neutral-500"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span class="text-[10px]">Контакты</span></button>
+          <button class="tab-item flex flex-col items-center gap-0.5 w-14 text-neutral-500"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/></svg><span class="text-[10px]">Звонки</span></button>
+          <button class="tab-item flex flex-col items-center gap-0.5 w-14 text-neutral-500" onclick="goTo('chats')"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg><span class="text-[10px]">Чаты</span></button>
+          <button class="tab-item active flex flex-col items-center gap-0.5 w-14"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" fill="none" stroke="currentColor" stroke-width="1.7"/></svg><span class="text-[10px] font-medium">Настройки</span></button>
+          <button class="tab-item flex flex-col items-center gap-0.5 w-14 text-neutral-500"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="text-[10px]">Поиск</span></button>
+        </div>
+      </div>
+    </div>
 
-            continueBtn.addEventListener('click', function() {
-                if (!continueBtn.disabled) {
-                    showCodeScreen();
-                }
-            });
+    <!-- ===================== PROFILE ===================== -->
+    <div id="screenProfile" class="screen next">
+      <div class="pt-12 pb-2 px-3 flex items-center justify-between bg-black flex-shrink-0">
+        <button onclick="goBack()" class="text-blue-500 text-[17px] font-medium px-2">‹ Назад</button>
+        <button class="text-blue-500 text-[17px] font-medium px-2" onclick="goTo('editProfile')">Изм.</button>
+      </div>
 
-            codeInput.addEventListener('input', function(e) {
-                let digits = e.target.value.replace(/\D/g, '');
-                if (digits.length > 5) digits = digits.slice(0, 5);
-                e.target.value = digits;
-                updateCodeButtonState();
-            });
+      <div class="flex-1 overflow-y-auto">
+        <div class="flex flex-col items-center pt-4 pb-5">
+          <div class="w-[110px] h-[110px] rounded-full bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 flex items-center justify-center text-white font-bold text-4xl mb-3">M</div>
+          <h1 class="text-[24px] font-semibold" id="profileName">mellstroy</h1>
+          <p class="text-[15px] text-green-400 mt-0.5">в сети</p>
+        </div>
 
-            codeInput.addEventListener('keydown', function(e) {
-                const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight'];
-                if (allowedKeys.includes(e.key)) return;
-                if (!/^\d$/.test(e.key)) {
-                    e.preventDefault();
-                }
-                if (e.key === 'Enter' && !confirmCodeBtn.disabled) {
-                    checkCode();
-                }
-            });
+        <div class="mx-4 mb-4 bg-neutral-900 rounded-2xl p-3.5 flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center flex-shrink-0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-[15px] font-medium truncate">misery - pupsies - Bellow</div>
+            <div class="text-[13px] text-neutral-500">Сейчас слушает</div>
+          </div>
+          <button class="w-9 h-9 rounded-full bg-neutral-800 flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </button>
+        </div>
 
-            function checkCode() {
-                const enteredCode = codeInput.value.replace(/\D/g, '');
-                const validCode = '00000';
-                
-                if (enteredCode === validCode) {
-                    codeHint.textContent = '✓ Код верный! Вход выполнен';
-                    codeHint.classList.remove('text-red-400');
-                    codeHint.classList.add('text-green-400');
-                    codeInput.disabled = true;
-                    confirmCodeBtn.disabled = true;
-                    confirmCodeBtn.classList.add('bg-neutral-800', 'text-neutral-600');
-                    confirmCodeBtn.classList.remove('bg-[#007aff]', 'text-white');
-                    
-                    setTimeout(() => {
-                        showChatsScreen();
-                    }, 1000);
-                } else {
-                    codeHint.textContent = 'Неверный код, попробуйте ещё раз';
-                    codeHint.classList.add('text-red-400');
-                    codeHint.classList.remove('text-green-400');
-                    codeInput.classList.add('border-red-500/60');
-                    setTimeout(() => codeInput.classList.remove('border-red-500/60'), 800);
-                    codeInput.value = '';
-                    updateCodeButtonState();
-                    codeInput.focus();
-                }
-            }
+        <div class="mx-4 mb-4 settings-section">
+          <div class="settings-row">
+            <div class="flex-1">
+              <div class="text-[13px] text-neutral-500">телефон</div>
+              <div class="text-[16px]" id="profilePhone">+7 777 161 85 60</div>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="flex-1">
+              <div class="text-[13px] text-neutral-500">имя пользователя</div>
+              <div class="text-[16px] text-blue-400" id="profileUsername">@brat077V</div>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="flex-1">
+              <div class="text-[13px] text-neutral-500">о себе</div>
+              <div class="text-[16px]" id="profileBio">коч братан</div>
+            </div>
+          </div>
+        </div>
 
-            confirmCodeBtn.addEventListener('click', function() {
-                if (!confirmCodeBtn.disabled) {
-                    checkCode();
-                }
-            });
+        <div class="flex border-b border-neutral-800 mx-4">
+          <button class="flex-1 py-3 text-center text-[15px] font-medium text-blue-500 border-b-2 border-blue-500">Публикации</button>
+          <button class="flex-1 py-3 text-center text-[15px] text-neutral-500">Истории</button>
+          <button class="flex-1 py-3 text-center text-[15px] text-neutral-500">Альбомы</button>
+        </div>
+        <div class="px-4 py-8 text-center text-neutral-600 text-[15px]">Нет публикаций</div>
+      </div>
+    </div>
 
-            backToPhone.addEventListener('click', function() {
-                showPhoneScreen();
-            });
+    <!-- ===================== EDIT PROFILE ===================== -->
+    <div id="screenEditProfile" class="screen next">
+      <div class="pt-12 pb-3 px-4 flex items-center justify-between bg-black flex-shrink-0">
+        <button onclick="goBack()" class="text-blue-500 text-[17px] font-medium">Отмена</button>
+        <h1 class="text-[17px] font-semibold">Изм. профиль</h1>
+        <button class="text-blue-500 text-[17px] font-semibold" onclick="saveProfile()">Готово</button>
+      </div>
 
-            resendCode.addEventListener('click', function(e) {
-                e.preventDefault();
-                codeHint.textContent = 'Код отправлен повторно (введите 00000)';
-                codeHint.classList.remove('text-red-400', 'text-green-400');
-                codeHint.classList.add('text-neutral-500');
-                codeInput.value = '';
-                codeInput.disabled = false;
-                updateCodeButtonState();
-                codeInput.focus();
-            });
+      <div class="flex-1 overflow-y-auto">
+        <div class="flex flex-col items-center pt-6 pb-6">
+          <div class="w-[100px] h-[100px] rounded-full bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 flex items-center justify-center text-white font-bold text-4xl mb-3 relative">
+            M
+            <div class="absolute bottom-0 right-0 w-8 h-8 bg-blue-500 rounded-full border-[3px] border-black flex items-center justify-center">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </div>
+          </div>
+          <button class="text-blue-500 text-[15px] font-medium">Установить фото</button>
+        </div>
 
-            // Обработчики для баннера безопасности
-            const yesButton = document.querySelector('.bg-yellow-600.text-white');
-            const noButton = document.querySelector('.border-yellow-600.text-yellow-400');
-            
-            if (yesButton) {
-                yesButton.addEventListener('click', function() {
-                    const banner = this.closest('.mx-3.mt-3');
-                    if (banner) {
-                        banner.style.display = 'none';
-                    }
-                });
-            }
-            
-            if (noButton) {
-                noButton.addEventListener('click', function() {
-                    alert('Внимание! Рекомендуется сменить пароль. (Прототип)');
-                });
-            }
+        <!-- Name / Bio -->
+        <div class="mx-4 mb-5 settings-section">
+          <div class="px-4 py-3 border-b border-neutral-800/60">
+            <div class="text-[13px] text-neutral-500 mb-1">Имя</div>
+            <input id="editName" type="text" value="mellstroy" class="edit-field">
+          </div>
+          <div class="px-4 py-3 border-b border-neutral-800/60">
+            <div class="text-[13px] text-neutral-500 mb-1">Фамилия</div>
+            <input id="editLastName" type="text" placeholder="Фамилия" class="edit-field">
+          </div>
+          <div class="px-4 py-3">
+            <div class="text-[13px] text-neutral-500 mb-1">О себе</div>
+            <input id="editBio" type="text" value="коч братан" class="edit-field">
+          </div>
+        </div>
 
-            // Обработчики для чатов
-            document.querySelectorAll('.cursor-pointer.hover\\:bg-\\[\\#17212b\\]').forEach(chat => {
-                chat.addEventListener('click', function() {
-                    if (this.querySelector('h3')?.textContent === 'Unixgram') {
-                        openChat();
-                    }
-                });
-            });
+        <!-- Editable Phone + Username -->
+        <div class="mx-4 mb-5 settings-section">
+          <div class="px-4 py-3 border-b border-neutral-800/60">
+            <div class="text-[13px] text-neutral-500 mb-1">Номер телефона</div>
+            <input id="editPhone" type="tel" value="+7 777 161 85 60" class="edit-field" inputmode="tel">
+          </div>
+          <div class="px-4 py-3">
+            <div class="text-[13px] text-neutral-500 mb-1">Имя пользователя</div>
+            <div class="flex items-center">
+              <span class="text-blue-400 text-[17px] mr-0.5">@</span>
+              <input id="editUsername" type="text" value="brat077V" class="edit-field text-blue-400" autocomplete="off" spellcheck="false">
+            </div>
+          </div>
+        </div>
 
-            updatePhoneButtonState();
-            updateCodeButtonState();
+        <div class="mx-4 mb-5 settings-section">
+          <div class="settings-row">
+            <span class="flex-1 text-[16px]">День рождения</span>
+            <span class="text-neutral-500 text-[15px]">не указан</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="settings-row">
+            <span class="flex-1 text-[16px]">Персональные цвета</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="settings-row">
+            <span class="flex-1 text-[16px]">Канал</span>
+            <span class="text-neutral-500 text-[15px]">нет</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="settings-row">
+            <span class="flex-1 text-[16px]">Автоматизация чатов</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
 
-            const closeBtn = document.querySelector('button[aria-label="Закрыть"]');
-            if (closeBtn) {
-                closeBtn.addEventListener('click', function() {
-                    alert('Закрыть окно (прототип)');
-                });
-            }
+    <!-- ===================== CHAT ===================== -->
+    <div id="screenChat" class="screen next">
+      <div class="pt-12 pb-3 px-3 flex items-center gap-3 bg-black border-b border-neutral-900">
+        <button onclick="goBack()" class="w-9 h-9 flex items-center justify-center text-blue-500 text-[28px] leading-none">‹</button>
+        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-white font-bold text-lg">U</div>
+        <div class="flex-1">
+          <div class="font-semibold text-[16px]">Unixgram</div>
+          <div class="text-[13px] text-neutral-500">бот</div>
+        </div>
+      </div>
+      <div class="flex-1 overflow-y-auto px-3 py-4 flex flex-col justify-end">
+        <div class="text-center mb-4"><span class="text-[12px] text-neutral-500 bg-neutral-900/80 px-3 py-1 rounded-full">Сегодня</span></div>
+        <div class="flex items-end gap-2 mb-2">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm">U</div>
+          <div class="bubble bubble-in">
+            <div class="text-[15px]">Ваш код подтверждения: <span class="font-semibold">00000</span></div>
+            <div class="text-[11px] text-neutral-500 text-right mt-1">00:00</div>
+          </div>
+        </div>
+      </div>
+      <div class="px-3 py-2 pb-6 flex items-center gap-2 border-t border-neutral-900">
+        <div class="flex-1 bg-neutral-900 rounded-2xl px-4 py-2.5 text-[15px] text-neutral-500">Сообщение</div>
+        <button class="w-9 h-9 flex items-center justify-center text-blue-500">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+    </div>
 
-            document.getElementById('chatInput')?.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    window.sendMessage();
-                }
-            });
-        })();
-    </script>
+  </div>
+
+  <script>
+    const screens = {
+      phone: document.getElementById('screenPhone'),
+      code: document.getElementById('screenCode'),
+      chats: document.getElementById('screenChats'),
+      settings: document.getElementById('screenSettings'),
+      profile: document.getElementById('screenProfile'),
+      editProfile: document.getElementById('screenEditProfile'),
+      chat: document.getElementById('screenChat')
+    };
+    let current = 'phone';
+    let history = ['phone'];
+
+    function goTo(name, dir = 'forward') {
+      if (name === current) return;
+      const from = screens[current], to = screens[name];
+      Object.values(screens).forEach(s => s.classList.remove('active','next','prev'));
+      if (dir === 'forward') { from.classList.add('prev'); to.classList.add('active'); history.push(name); }
+      else { from.classList.add('next'); to.classList.add('active'); history.pop(); }
+      current = name;
+    }
+    function goBack() {
+      if (history.length <= 1) return;
+      goTo(history[history.length-2], 'back');
+    }
+    function openChat() { goTo('chat'); }
+    function dismissBanner(isMe) {
+      const b = document.getElementById('securityBanner');
+      if (!b) return;
+      b.style.transition = 'all 0.25s'; b.style.opacity = '0'; b.style.maxHeight = '0'; b.style.margin = '0'; b.style.padding = '0'; b.style.overflow = 'hidden';
+      setTimeout(() => b.remove(), 280);
+      if (!isMe) setTimeout(() => alert('Сессии на других устройствах будут завершены'), 300);
+    }
+
+    // ===== SAVE PROFILE (имя + юзернейм + номер) =====
+    function saveProfile() {
+      const name = document.getElementById('editName').value.trim() || 'mellstroy';
+      const bio = document.getElementById('editBio').value.trim() || '';
+      let phone = document.getElementById('editPhone').value.trim() || '+7 777 161 85 60';
+      let username = document.getElementById('editUsername').value.trim().replace(/^@/, '') || 'brat077V';
+
+      // Обновляем все места, где отображаются данные
+      document.getElementById('settingsName').textContent = name;
+      document.getElementById('settingsPhone').textContent = phone;
+      document.getElementById('settingsUsername').textContent = '@' + username;
+
+      document.getElementById('profileName').textContent = name;
+      document.getElementById('profilePhone').textContent = phone;
+      document.getElementById('profileUsername').textContent = '@' + username;
+      document.getElementById('profileBio').textContent = bio;
+
+      // Возвращаемся назад
+      goBack();
+    }
+
+    // Username: только латиница, цифры и _
+    document.getElementById('editUsername').addEventListener('input', function(e) {
+      this.value = this.value.replace(/[^a-zA-Z0-9_]/g, '');
+    });
+
+    // Phone: лёгкая маска
+    document.getElementById('editPhone').addEventListener('input', function(e) {
+      // Разрешаем +, цифры и пробелы
+      this.value = this.value.replace(/[^\d+\s]/g, '');
+    });
+
+    // Phone auth logic
+    const phoneInput = document.getElementById('phoneInput');
+    const continueBtn = document.getElementById('continueBtn');
+    phoneInput.addEventListener('input', e => {
+      let d = e.target.value.replace(/\D/g,'').slice(0,9);
+      let f = '';
+      if (d.length>0) f=d.slice(0,3);
+      if (d.length>3) f+=' '+d.slice(3,6);
+      if (d.length>6) f+=' '+d.slice(6,9);
+      e.target.value = f;
+      continueBtn.disabled = d.length !== 9;
+    });
+    continueBtn.addEventListener('click', () => {
+      if (continueBtn.disabled) return;
+      const d = phoneInput.value.replace(/\D/g,'');
+      document.getElementById('displayNumber').textContent = `+888 ${d.slice(0,3)} ${d.slice(3,6)} ${d.slice(6,9)}`;
+      startTimer(); goTo('code'); setTimeout(()=>document.querySelector('.code-digit').focus(),300);
+    });
+
+    // Code
+    const codeDigits = document.querySelectorAll('.code-digit');
+    const verifyBtn = document.getElementById('verifyBtn');
+    let timeLeft = 60, timerInterval;
+    function startTimer() {
+      clearInterval(timerInterval); timeLeft=60;
+      const btn = document.getElementById('resendBtn');
+      btn.disabled=true; btn.innerHTML='Отправить код повторно через <span id="timer">60</span>';
+      timerInterval = setInterval(()=>{
+        timeLeft--; const t=document.getElementById('timer'); if(t) t.textContent=timeLeft;
+        if(timeLeft<=0){ clearInterval(timerInterval); btn.disabled=false; btn.innerHTML='Отправить код повторно'; }
+      },1000);
+    }
+    codeDigits.forEach((inp,i)=>{
+      inp.addEventListener('input',e=>{
+        e.target.value = e.target.value.replace(/\D/g,'').slice(0,1);
+        if(e.target.value && i<5) codeDigits[i+1].focus();
+        verifyBtn.disabled = Array.from(codeDigits).map(d=>d.value).join('').length!==6;
+      });
+      inp.addEventListener('keydown',e=>{
+        if(e.key==='Backspace' && !e.target.value && i>0){ codeDigits[i-1].focus(); codeDigits[i-1].value=''; }
+      });
+    });
+    verifyBtn.addEventListener('click',()=>{ if(!verifyBtn.disabled) goTo('chats'); });
+  </script>
 </body>
 </html>
