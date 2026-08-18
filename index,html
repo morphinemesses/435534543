@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Telegram — Чаты</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome для иконок -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            background-color: #0e1621;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #007aff;
+        }
+        .toggle-checkbox:checked + .toggle-label .toggle-dot {
+            transform: translateX(1.5rem);
+        }
+        .toggle-label {
+            transition: background-color 0.3s ease;
+        }
+        .toggle-dot {
+            transition: transform 0.3s ease;
+        }
+        input:focus {
+            outline: none;
+        }
+        .screen {
+            transition: opacity 0.4s ease, transform 0.3s ease;
+        }
+        .hidden-screen {
+            display: none !important;
+        }
+        .code-input {
+            letter-spacing: 0.5em;
+            font-weight: 500;
+            font-size: 1.4rem;
+        }
+        .chat-message {
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .typing-indicator {
+            display: inline-flex;
+            gap: 4px;
+            padding: 8px 12px;
+        }
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background-color: #8e8e93;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-8px); }
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2b5278;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen text-white antialiased select-none p-0 sm:p-4" style="background-color: #0e1621;">
+
+    <div class="w-full max-w-md mx-auto relative flex flex-col h-screen sm:h-[90vh] sm:rounded-3xl sm:shadow-2xl overflow-hidden" style="background-color: #0e1621;">
+        
+        <!-- ЭКРАН 1: ВВОД НОМЕРА -->
+        <div id="screenPhone" class="screen flex flex-col h-full bg-black">
+            <div class="flex flex-col items-center relative mb-6 pt-6 px-5">
+                <button class="absolute left-5 top-6 w-10 h-10 flex items-center justify-center text-neutral-500 hover:text-white transition-colors text-2xl font-light" aria-label="Закрыть">
+                    ✕
+                </button>
+                <div class="w-20 h-20 rounded-full bg-neutral-800 flex items-center justify-center mb-5 shadow-lg border border-neutral-700/40">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-neutral-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
+                    </svg>
+                </div>
+                <h1 class="text-2xl font-semibold tracking-tight mb-1">Телефон</h1>
+                <p class="text-neutral-400 text-sm mb-1">Пожалуйста, подтвердите страну и введите</p>
+                <p class="text-neutral-400 text-sm">
+                    номер телефона. 
+                    <a href="#" class="text-[#007aff] font-medium hover:underline">используйте ключ доступа ›</a>
+                </p>
+            </div>
+
+            <div class="px-5">
+                <div class="w-full bg-neutral-900 rounded-2xl px-4 py-3.5 flex items-center justify-between mb-6 cursor-pointer active:bg-neutral-800 transition-colors">
+                    <div class="flex items-center gap-3">
+                        <div class="w-7 h-7 rounded-full bg-neutral-800 flex items-center justify-center">
+                            <i class="fas fa-user-secret text-neutral-400 text-sm"></i>
+                        </div>
+                        <span class="font-medium text-[15px]">Анонимные номера</span>
+                    </div>
+                    <i class="fas fa-chevron-right text-neutral-500 text-sm"></i>
+                </div>
+
+                <div class="w-full bg-neutral-900 rounded-2xl px-4 py-1 flex items-center h-16 mb-6 border border-neutral-800/80 focus-within:border-[#007aff]/60 transition-colors">
+                    <span class="text-white text-lg font-medium tracking-wide pr-3">+888</span>
+                    <div class="h-6 w-px bg-neutral-700/70 mx-1"></div>
+                    <input 
+                        type="tel" 
+                        id="phoneInput" 
+                        inputmode="numeric" 
+                        autocomplete="tel" 
+                        placeholder="000 000 000" 
+                        maxlength="11" 
+                        class="bg-transparent flex-1 text-white text-lg font-medium placeholder-neutral-600 tracking-wider ml-2 py-3"
+                    >
+                </div>
+
+                <div class="flex items-center justify-between mb-8">
+                    <div class="pr-4">
+                        <p class="text-[16px] font-medium text-white">Синхронизировать контакты</p>
+                        <p class="text-[13px] text-neutral-500 leading-tight mt-0.5">Контакты с этого устройства будут импортированы.</p>
+                    </div>
+                    <div class="relative inline-block w-12 h-7 flex-shrink-0 ml-2">
+                        <input type="checkbox" id="toggleContacts" class="toggle-checkbox peer sr-only" checked>
+                        <label for="toggleContacts" class="toggle-label absolute inset-0 rounded-full bg-[#007aff] cursor-pointer transition-colors duration-300 flex items-center">
+                            <span class="toggle-dot absolute left-1 top-1 bg-white w-5 h-5 rounded-full shadow-md transform translate-x-5 transition-transform duration-300"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <button 
+                    id="continueBtn" 
+                    disabled 
+                    class="w-full py-4 rounded-2xl bg-neutral-800 text-neutral-600 font-semibold text-[17px] transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    Продолжить
+                </button>
+                <p class="text-center text-neutral-600 text-xs mt-4 pb-4">Ваш номер будет использован только для входа в Telegram.</p>
+            </div>
+        </div>
+
+        <!-- ЭКРАН 2: ВВОД КОДА -->
+        <div id="screenCode" class="screen hidden-screen flex flex-col h-full bg-black">
+            <div class="flex flex-col items-center relative mb-6 pt-6 px-5">
+                <button id="backToPhone" class="absolute left-5 top-6 w-10 h-10 flex items-center justify-center text-neutral-500 hover:text-white transition-colors text-2xl font-light" aria-label="Назад">
+                    ←
+                </button>
+                <div class="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center mb-4 shadow-lg border border-neutral-700/40">
+                    <i class="fas fa-lock text-neutral-300 text-xl"></i>
+                </div>
+                <h1 class="text-xl font-semibold tracking-tight mb-1">Введите код</h1>
+                <p class="text-neutral-400 text-sm text-center px-6">
+                    Мы отправили SMS с кодом на номер <span id="displayPhone" class="text-white font-medium">+888 000 000 000</span>
+                </p>
+            </div>
+
+            <div class="px-5">
+                <div class="w-full bg-neutral-900 rounded-2xl px-4 py-2 flex items-center h-16 mb-4 border border-neutral-800/80 focus-within:border-[#007aff]/60 transition-colors">
+                    <input 
+                        type="text" 
+                        id="codeInput" 
+                        inputmode="numeric" 
+                        autocomplete="one-time-code" 
+                        placeholder="•••••" 
+                        maxlength="5" 
+                        class="code-input bg-transparent flex-1 text-white text-center placeholder-neutral-600 py-3"
+                    >
+                </div>
+
+                <p id="codeHint" class="text-neutral-500 text-sm mb-4 text-center">Введите 5-значный код</p>
+
+                <button 
+                    id="confirmCodeBtn" 
+                    disabled 
+                    class="w-full py-4 rounded-2xl bg-neutral-800 text-neutral-600 font-semibold text-[17px] transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    Подтвердить
+                </button>
+
+                <div class="text-center mt-4 pb-4">
+                    <span class="text-neutral-500 text-sm">Не пришёл код? </span>
+                    <a href="#" id="resendCode" class="text-[#007aff] font-medium hover:underline">Отправить ещё раз</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ЭКРАН 3: ЧАТЫ С ПОЛНЫМ ИНТЕРФЕЙСОМ -->
+        <div id="screenChats" class="screen hidden-screen flex flex-col h-full" style="background-color: #0e1621;">
+            <!-- Верхняя панель -->
+            <div class="px-4 pt-4 pb-2 flex items-center justify-between" style="background-color: #17212b;">
+                <button class="px-3 py-2 rounded-lg text-[#007aff] font-medium hover:bg-[#2b5278] transition-colors">
+                    Изм.
+                </button>
+                <h1 class="text-xl font-bold">Чаты</h1>
+                <div class="flex items-center gap-2">
+                    <button class="w-10 h-10 rounded-full flex items-center justify-center text-neutral-400 hover:text-white transition-colors">
+                        <i class="fas fa-pen text-lg"></i>
+                    </button>
+                    <button class="w-10 h-10 rounded-full flex items-center justify-center text-neutral-400 hover:text-white transition-colors">
+                        <i class="fas fa-bolt text-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Системный баннер безопасности -->
+            <div class="mx-3 mt-3 p-4 rounded-2xl border border-yellow-600/30" style="background-color: #2b1e0e;">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style="background-color: #3a2b1a;">
+                        <i class="fas fa-shield-halved text-yellow-500 text-lg"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm text-yellow-100 leading-snug">
+                            <span class="font-semibold">Кто-то получил доступ к Вашим чатам...</span><br>
+                            Обнаружен вход в Ваш аккаунт с 88ЕС, Taraz, Kazakhstan. Это были Вы?
+                        </p>
+                        <div class="flex gap-2 mt-3">
+                            <button class="px-4 py-2 rounded-full text-sm font-medium bg-yellow-600 text-white hover:bg-yellow-700 transition-colors">
+                                Да, это я
+                            </button>
+                            <button class="px-4 py-2 rounded-full text-sm font-medium border border-yellow-600 text-yellow-400 hover:bg-yellow-600/20 transition-colors">
+                                Нет, не я!
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Список чатов -->
+            <div class="flex-1 overflow-y-auto mt-2">
+                <!-- Закрепленные чаты -->
+                <div class="px-4 py-2 flex items-center justify-between">
+                    <span class="text-xs text-neutral-500 font-medium">ЗАКРЕПЛЕННЫЕ</span>
+                </div>
+                
+                <!-- Закрепленный чат 1 -->
+                <div class="px-3 py-2 flex items-center gap-3 cursor-pointer hover:bg-[#17212b] transition-colors active:bg-[#17212b] rounded-lg mx-1 my-1">
+                    <div class="relative flex-shrink-0">
+                        <div class="w-14 h-14 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+                            <i class="fas fa-robot text-white text-xl"></i>
+                        </div>
+                        <span class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-[#0e1621]"></span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-1">
+                                <i class="fas fa-thumbtack text-xs text-neutral-500"></i>
+                                <h3 class="font-semibold text-white">Unixgram</h3>
+                            </div>
+                            <span class="text-xs text-neutral-500">14:32</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <p class="text-neutral-400 text-sm truncate">bot • был ваш код подтверждение 00000</p>
+                            <span class="bg-[#007aff] text-white text-xs font-medium rounded-full w-5 h-5 flex items-center justify-center ml-2">1</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Закрепленный чат 2 -->
+                <div class="px-3 py-2 flex items-center gap-3 cursor-pointer hover:bg-[#17212b] transition-colors active:bg-[#17212b] rounded-lg mx-1 my-1">
+                    <div class="relative flex-shrink-0">
+                        <div class="w-14 h-14 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center">
+                            <i class="fas fa-users text-white text-xl"></i>
+                        </div>
+                        <span class="absolute bottom-0 right-0 w-4 h-4 bg-gray-500 rounded-full border-2 border-[#0e1621]"></span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-1">
+                                <i class="fas fa-thumbtack text-xs text-neutral-500"></i>
+                                <h3 class="font-semibold text-white">Рабочая группа</h3>
+                            </div>
+                            <span class="text-xs text-neutral-500">13:15</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <p class="text-neutral-400 text-sm truncate">Алексей: Отчёт готов к отправке</p>
+                            <span class="bg-[#007aff] text-white text-xs font-medium rounded-full w-5 h-5 flex items-center justify-center ml-2">3</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Обычные чаты -->
+                <div class="px-4 py-2 flex items-center justify-between mt-2">
+                    <span class="text-xs text-neutral-500 font-medium">ЧАТЫ</span>
+                </div>
+
+                <!-- Обычный чат 1 -->
+                <div class="px-3 py-2 flex items-center gap-3 cursor-pointer hover:bg-[#17212b] transition-colors active:bg-[#17212b] rounded-lg mx-1 my-1">
+                    <div class="relative flex-shrink-0">
+                        <div class="w-14 h-14 rounded-full bg-gradient-to-br from-pink-500 to-red-500 flex items-center justify-center">
+                            <i class="fas fa-user text-white text-xl"></i>
+                        </div>
+                        <span class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-[#0e1621]"></span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-semibold text-white">Мария Иванова</h3>
+                            <span class="text-xs text-neutral-500">12:45</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <p class="text-neutral-400 text-sm truncate">Спасибо за информацию! 🙏</p>
+                            <i class="fas fa-check-double text-blue-500 text-sm ml-2"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Обычный чат 2 -->
+                <div class="px-3 py-2 flex items-center gap-3 cursor-pointer hover:bg-[#17212b] transition-colors active:bg-[#17212b] rounded-lg mx-1 my-1">
+                    <div class="relative flex-shrink-0">
+                        <div class="w-14 h-14 rounded-full bg-gradient-to-br from-orange-500 to-yellow-500 flex items-center justify-center">
+                            <i class="fas fa-user text-white text-xl"></i>
+                        </div>
+                        <span class="absolute bottom-0 right-0 w-4 h-4 bg-gray-500 rounded-full border-2 border-[#0e1621]"></span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-semibold text-white">Дмитрий Смирнов</h3>
+                            <span class="text-xs text-neutral-500">11:20</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <p class="text-neutral-400 text-sm truncate">Встреча переносится на завтра</p>
+                            <span class="bg-gray-600 text-white text-xs font-medium rounded-full w-5 h-5 flex items-center justify-center ml-2">5</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Обычный чат 3 -->
+                <div class="px-3 py-2 flex items-center gap-3 cursor-pointer hover:bg-[#17212b] transition-colors active:bg-[#17212b] rounded-lg mx-1 my-1">
+                    <div class="relative flex-shrink-0">
+                        <div class="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                            <i class="fas fa-user text-white text-xl"></i>
+                        </div>
+                        <span class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-[#0e1621]"></span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-semibold text-white">Анна Петрова</h3>
+                            <span class="text-xs text-neutral-500">09:15</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <p class="text-neutral-400 text-sm truncate">Документы готовы к подписанию</p>
+                            <i class="fas fa-check text-neutral-500 text-sm ml-2"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Обычный чат 4 -->
+                <div class="px-3 py-2 flex items-center gap-3 cursor-pointer hover:bg-[#17212b] transition-colors active:bg-[#17212b] rounded-lg mx-1 my-1">
+                    <div class="relative flex-shrink-0">
+                        <div class="w-14 h-14 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">
+                            <i class="fas fa-user text-white text-xl"></i>
+                        </div>
+                        <span class="absolute bottom-0 right-0 w-4 h-4 bg-gray-500 rounded-full border-2 border-[#0e1621]"></span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-semibold text-white">Сергей Волков</h3>
+                            <span class="text-xs text-neutral-500">Вчера</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <p class="text-neutral-400 text-sm truncate">Отправь мне файл с проектом</p>
+                            <span class="bg-gray-600 text-white text-xs font-medium rounded-full w-5 h-5 flex items-center justify-center ml-2">2</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Обычный чат 5 -->
+                <div class="px-3 py-2 flex items-center gap-3 cursor-pointer hover:bg-[#17212b] transition-colors active:bg-[#17212b] rounded-lg mx-1 my-1">
+                    <div class="relative flex-shrink-0">
+                        <div class="w-14 h-14 rounded-full bg-gradient-to-br from-purple-600 to-indigo-700 flex items-center justify-center">
+                            <i class="fas fa-user text-white text-xl"></i>
+                        </div>
+                        <span class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-[#0e1621]"></span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-semibold text-white">Елена Козлова</h3>
+                            <span class="text-xs text-neutral-500">Вчера</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <p class="text-neutral-400 text-sm truncate">Созвон в 15:00 по мск</p>
+                            <i class="fas fa-check-double text-blue-500 text-sm ml-2"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Нижняя плавающая панель навигации -->
+            <div class="absolute bottom-4 left-4 right-4 flex items-center justify-around rounded-3xl shadow-2xl border border-white/10" style="background-color: rgba(23, 33, 43, 0.95); backdrop-filter: blur(10px);">
+                <button class="flex flex-col items-center py-3 px-4 text-neutral-400 hover:text-white transition-colors">
+                    <div class="relative">
+                        <i class="fas fa-user text-xl"></i>
+                        <span class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border border-[#17212b]"></span>
+                    </div>
+                    <span class="text-xs mt-1">Контакты</span>
+                </button>
+                
+                <button class="flex flex-col items-center py-3 px-4 text-neutral-400 hover:text-white transition-colors">
+                    <i class="fas fa-phone text-xl"></i>
+                    <span class="text-xs mt-1">Звонки</span>
+                </button>
+                
+                <button class="flex flex-col items-center py-3 px-4 text-[#007aff] transition-colors">
+                    <div class="relative">
+                        <i class="fas fa-comment text-xl"></i>
+                        <span class="absolute -top-1 -right-2 bg-[#007aff] text-white text-xs font-medium rounded-full w-5 h-5 flex items-center justify-center border border-[#17212b]">14</span>
+                    </div>
+                    <span class="text-xs mt-1 font-medium">Чаты</span>
+                </button>
+                
+                <button class="flex flex-col items-center py-3 px-4 text-neutral-400 hover:text-white transition-colors">
+                    <div class="relative">
+                        <i class="fas fa-cog text-xl"></i>
+                        <span class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border border-[#17212b]"></span>
+                    </div>
+                    <span class="text-xs mt-1">Настройки</span>
+                </button>
+                
+                <button class="flex flex-col items-center py-3 px-4 text-neutral-400 hover:text-white transition-colors">
+                    <i class="fas fa-search text-xl"></i>
+                    <span class="text-xs mt-1">Поиск</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ЭКРАН 4: ОТКРЫТЫЙ ЧАТ -->
+        <div id="screenOpenChat" class="screen hidden-screen flex flex-col h-full" style="background-color: #0e1621;">
+            <div class="px-4 pt-4 pb-2 flex items-center gap-3" style="background-color: #17212b;">
+                <button onclick="closeChat()" class="w-10 h-10 flex items-center justify-center text-neutral-400 hover:text-white">
+                    <i class="fas fa-arrow-left text-xl"></i>
+                </button>
+                <div class="flex items-center gap-3 flex-1">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+                        <i class="fas fa-robot text-white"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-semibold">Unixgram</h2>
+                        <p class="text-xs text-green-500">онлайн</p>
+                    </div>
+                </div>
+                <button class="w-10 h-10 flex items-center justify-center text-neutral-400 hover:text-white">
+                    <i class="fas fa-ellipsis-v text-xl"></i>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+                <div class="text-center">
+                    <span class="text-xs text-neutral-500 bg-[#17212b] px-3 py-1 rounded-full">Сегодня</span>
+                </div>
+
+                <div class="flex items-end gap-2 chat-message">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-robot text-white text-xs"></i>
+                    </div>
+                    <div class="bg-[#17212b] rounded-2xl rounded-bl-none px-4 py-2 max-w-[75%]">
+                        <p class="text-white">Здравствуйте! 👋</p>
+                        <span class="text-xs text-neutral-500 mt-1 block">14:30</span>
+                    </div>
+                </div>
+
+                <div class="flex items-end gap-2 chat-message">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-robot text-white text-xs"></i>
+                    </div>
+                    <div class="bg-[#17212b] rounded-2xl rounded-bl-none px-4 py-2 max-w-[75%]">
+                        <p class="text-white">Был ваш код подтверждения: <span class="font-bold text-[#007aff] text-lg">00000</span></p>
+                        <span class="text-xs text-neutral-500 mt-1 block">14:32</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-4 py-3 flex items-center gap-2" style="background-color: #17212b;">
+                <button class="w-10 h-10 rounded-full flex items-center justify-center text-neutral-400 hover:text-white">
+                    <i class="fas fa-paperclip"></i>
+                </button>
+                <input 
+                    type="text" 
+                    placeholder="Сообщение" 
+                    class="flex-1 bg-[#0e1621] rounded-full px-4 py-3 text-white placeholder-neutral-500 focus:outline-none"
+                    id="chatInput"
+                >
+                <button class="w-10 h-10 rounded-full bg-[#007aff] flex items-center justify-center text-white" onclick="sendMessage()">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+        
+    </div>
+
+    <script>
+        (function() {
+            const screenPhone = document.getElementById('screenPhone');
+            const screenCode = document.getElementById('screenCode');
+            const screenChats = document.getElementById('screenChats');
+            const screenOpenChat = document.getElementById('screenOpenChat');
+            
+            const phoneInput = document.getElementById('phoneInput');
+            const continueBtn = document.getElementById('continueBtn');
+            
+            const codeInput = document.getElementById('codeInput');
+            const confirmCodeBtn = document.getElementById('confirmCodeBtn');
+            const displayPhone = document.getElementById('displayPhone');
+            const backToPhone = document.getElementById('backToPhone');
+            const resendCode = document.getElementById('resendCode');
+            const codeHint = document.getElementById('codeHint');
+
+            function formatPhone(value) {
+                let digits = value.replace(/\D/g, '');
+                if (digits.length > 9) digits = digits.slice(0, 9);
+                const parts = [];
+                if (digits.length > 0) parts.push(digits.substring(0, 3));
+                if (digits.length >= 4) parts.push(digits.substring(3, 6));
+                if (digits.length >= 7) parts.push(digits.substring(6, 9));
+                return parts.join(' ');
+            }
+
+            function updatePhoneButtonState() {
+                const rawDigits = phoneInput.value.replace(/\D/g, '');
+                const isValid = rawDigits.length === 9;
+                if (isValid) {
+                    continueBtn.disabled = false;
+                    continueBtn.classList.remove('bg-neutral-800', 'text-neutral-600');
+                    continueBtn.classList.add('bg-[#007aff]', 'text-white', 'hover:bg-[#1a87ff]', 'shadow-lg');
+                } else {
+                    continueBtn.disabled = true;
+                    continueBtn.classList.add('bg-neutral-800', 'text-neutral-600');
+                    continueBtn.classList.remove('bg-[#007aff]', 'text-white', 'hover:bg-[#1a87ff]', 'shadow-lg');
+                }
+            }
+
+            function updateCodeButtonState() {
+                const codeDigits = codeInput.value.replace(/\D/g, '');
+                const isValid = codeDigits.length === 5;
+                if (isValid) {
+                    confirmCodeBtn.disabled = false;
+                    confirmCodeBtn.classList.remove('bg-neutral-800', 'text-neutral-600');
+                    confirmCodeBtn.classList.add('bg-[#007aff]', 'text-white', 'hover:bg-[#1a87ff]', 'shadow-lg');
+                } else {
+                    confirmCodeBtn.disabled = true;
+                    confirmCodeBtn.classList.add('bg-neutral-800', 'text-neutral-600');
+                    confirmCodeBtn.classList.remove('bg-[#007aff]', 'text-white', 'hover:bg-[#1a87ff]', 'shadow-lg');
+                }
+                if (codeDigits.length !== 5) {
+                    codeHint.textContent = 'Введите 5-значный код';
+                    codeHint.classList.remove('text-red-400');
+                }
+            }
+
+            function showCodeScreen() {
+                screenPhone.classList.add('hidden-screen');
+                screenCode.classList.remove('hidden-screen');
+                screenChats.classList.add('hidden-screen');
+                screenOpenChat.classList.add('hidden-screen');
+                const formatted = '+888 ' + phoneInput.value.trim();
+                displayPhone.textContent = formatted;
+                codeInput.value = '';
+                updateCodeButtonState();
+                codeHint.textContent = 'Введите 5-значный код';
+                codeHint.classList.remove('text-red-400');
+                setTimeout(() => codeInput.focus(), 300);
+            }
+
+            function showPhoneScreen() {
+                screenCode.classList.add('hidden-screen');
+                screenChats.classList.add('hidden-screen');
+                screenOpenChat.classList.add('hidden-screen');
+                screenPhone.classList.remove('hidden-screen');
+                setTimeout(() => phoneInput.focus(), 300);
+            }
+
+            function showChatsScreen() {
+                screenPhone.classList.add('hidden-screen');
+                screenCode.classList.add('hidden-screen');
+                screenOpenChat.classList.add('hidden-screen');
+                screenChats.classList.remove('hidden-screen');
+            }
+
+            window.openChat = function() {
+                screenChats.classList.add('hidden-screen');
+                screenOpenChat.classList.remove('hidden-screen');
+            };
+
+            window.closeChat = function() {
+                screenOpenChat.classList.add('hidden-screen');
+                screenChats.classList.remove('hidden-screen');
+            };
+
+            window.sendMessage = function() {
+                const chatInput = document.getElementById('chatInput');
+                const messageText = chatInput.value.trim();
+                if (messageText) {
+                    const messagesContainer = document.querySelector('#screenOpenChat .flex-1.overflow-y-auto');
+                    const userMessage = document.createElement('div');
+                    userMessage.className = 'flex items-end gap-2 justify-end chat-message';
+                    userMessage.innerHTML = `
+                        <div class="bg-[#007aff] rounded-2xl rounded-br-none px-4 py-2 max-w-[75%]">
+                            <p class="text-white">${messageText}</p>
+                            <span class="text-xs text-blue-200 mt-1 block">${new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}</span>
+                        </div>
+                        <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-user text-white text-xs"></i>
+                        </div>
+                    `;
+                    messagesContainer.appendChild(userMessage);
+                    
+                    chatInput.value = '';
+                    
+                    setTimeout(() => {
+                        const botReply = document.createElement('div');
+                        botReply.className = 'flex items-end gap-2 chat-message';
+                        botReply.innerHTML = `
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-robot text-white text-xs"></i>
+                            </div>
+                            <div class="bg-[#17212b] rounded-2xl rounded-bl-none px-4 py-2 max-w-[75%]">
+                                <p class="text-white">Ваш код подтверждения: <span class="font-bold text-[#007aff]">00000</span></p>
+                                <span class="text-xs text-neutral-500 mt-1 block">${new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}</span>
+                            </div>
+                        `;
+                        messagesContainer.appendChild(botReply);
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    }, 1000);
+                    
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+            };
+
+            phoneInput.addEventListener('input', function(e) {
+                const formatted = formatPhone(e.target.value);
+                if (e.target.value !== formatted) {
+                    e.target.value = formatted;
+                }
+                updatePhoneButtonState();
+            });
+
+            phoneInput.addEventListener('keydown', function(e) {
+                const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+                if (allowedKeys.includes(e.key)) return;
+                if (!/^\d$/.test(e.key)) {
+                    e.preventDefault();
+                }
+                if (e.key === 'Enter' && !continueBtn.disabled) {
+                    showCodeScreen();
+                }
+            });
+
+            continueBtn.addEventListener('click', function() {
+                if (!continueBtn.disabled) {
+                    showCodeScreen();
+                }
+            });
+
+            codeInput.addEventListener('input', function(e) {
+                let digits = e.target.value.replace(/\D/g, '');
+                if (digits.length > 5) digits = digits.slice(0, 5);
+                e.target.value = digits;
+                updateCodeButtonState();
+            });
+
+            codeInput.addEventListener('keydown', function(e) {
+                const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight'];
+                if (allowedKeys.includes(e.key)) return;
+                if (!/^\d$/.test(e.key)) {
+                    e.preventDefault();
+                }
+                if (e.key === 'Enter' && !confirmCodeBtn.disabled) {
+                    checkCode();
+                }
+            });
+
+            function checkCode() {
+                const enteredCode = codeInput.value.replace(/\D/g, '');
+                const validCode = '00000';
+                
+                if (enteredCode === validCode) {
+                    codeHint.textContent = '✓ Код верный! Вход выполнен';
+                    codeHint.classList.remove('text-red-400');
+                    codeHint.classList.add('text-green-400');
+                    codeInput.disabled = true;
+                    confirmCodeBtn.disabled = true;
+                    confirmCodeBtn.classList.add('bg-neutral-800', 'text-neutral-600');
+                    confirmCodeBtn.classList.remove('bg-[#007aff]', 'text-white');
+                    
+                    setTimeout(() => {
+                        showChatsScreen();
+                    }, 1000);
+                } else {
+                    codeHint.textContent = 'Неверный код, попробуйте ещё раз';
+                    codeHint.classList.add('text-red-400');
+                    codeHint.classList.remove('text-green-400');
+                    codeInput.classList.add('border-red-500/60');
+                    setTimeout(() => codeInput.classList.remove('border-red-500/60'), 800);
+                    codeInput.value = '';
+                    updateCodeButtonState();
+                    codeInput.focus();
+                }
+            }
+
+            confirmCodeBtn.addEventListener('click', function() {
+                if (!confirmCodeBtn.disabled) {
+                    checkCode();
+                }
+            });
+
+            backToPhone.addEventListener('click', function() {
+                showPhoneScreen();
+            });
+
+            resendCode.addEventListener('click', function(e) {
+                e.preventDefault();
+                codeHint.textContent = 'Код отправлен повторно (введите 00000)';
+                codeHint.classList.remove('text-red-400', 'text-green-400');
+                codeHint.classList.add('text-neutral-500');
+                codeInput.value = '';
+                codeInput.disabled = false;
+                updateCodeButtonState();
+                codeInput.focus();
+            });
+
+            // Обработчики для баннера безопасности
+            const yesButton = document.querySelector('.bg-yellow-600.text-white');
+            const noButton = document.querySelector('.border-yellow-600.text-yellow-400');
+            
+            if (yesButton) {
+                yesButton.addEventListener('click', function() {
+                    const banner = this.closest('.mx-3.mt-3');
+                    if (banner) {
+                        banner.style.display = 'none';
+                    }
+                });
+            }
+            
+            if (noButton) {
+                noButton.addEventListener('click', function() {
+                    alert('Внимание! Рекомендуется сменить пароль. (Прототип)');
+                });
+            }
+
+            // Обработчики для чатов
+            document.querySelectorAll('.cursor-pointer.hover\\:bg-\\[\\#17212b\\]').forEach(chat => {
+                chat.addEventListener('click', function() {
+                    if (this.querySelector('h3')?.textContent === 'Unixgram') {
+                        openChat();
+                    }
+                });
+            });
+
+            updatePhoneButtonState();
+            updateCodeButtonState();
+
+            const closeBtn = document.querySelector('button[aria-label="Закрыть"]');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', function() {
+                    alert('Закрыть окно (прототип)');
+                });
+            }
+
+            document.getElementById('chatInput')?.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    window.sendMessage();
+                }
+            });
+        })();
+    </script>
+</body>
+</html>
